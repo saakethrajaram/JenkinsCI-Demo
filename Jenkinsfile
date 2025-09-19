@@ -16,27 +16,27 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                bat 'npm install'
             }
         }
 
         stage('Run Unit & Integration Tests') {
             steps {
-                sh 'npm test || true'
+                bat 'npm test || exit 0'
             }
         }
 
         stage('SonarCloud Analysis') {
             steps {
                 withSonarQubeEnv('SonarCloud') {
-                    sh """
-                        sonar-scanner \
-                          -Dsonar.projectKey=saakethrajaram_JenkinsCI-Demo \
-                          -Dsonar.organization=saakethrajaram \
-                          -Dsonar.sources=. \
-                          -Dsonar.exclusions=node_modules/**,test/** \
-                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                          -Dsonar.login=$SONAR_TOKEN
+                    bat """
+                        sonar-scanner ^
+                          -Dsonar.projectKey=saakethrajaram_JenkinsCI-Demo ^
+                          -Dsonar.organization=saakethrajaram ^
+                          -Dsonar.sources=. ^
+                          -Dsonar.exclusions=node_modules/**,test/** ^
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info ^
+                          -Dsonar.login=%SONAR_TOKEN%
                     """
                 }
             }
