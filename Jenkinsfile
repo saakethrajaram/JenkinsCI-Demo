@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQube 'SonarScanner' // must match the name configured in Jenkins
-    }
-
     environment {
         SONAR_TOKEN = credentials('SONAR_TOKEN') // SonarCloud token
     }
@@ -12,7 +8,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/saakethrajaram/JenkinsCI-Demo.git', branch: 'main'
+                git url: 'https://github.com/saakethrajaram/JenkinsCI-Demo.git',
+                    branch: 'main',
+                    credentialsId: 'git-creds'
             }
         }
 
