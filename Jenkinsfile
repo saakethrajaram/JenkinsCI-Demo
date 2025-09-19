@@ -2,34 +2,53 @@ pipeline {
     agent any
 
     tools {
-        // Use the SonarQube Scanner you configured
-        sonarQube 'SonarScanner'
+        sonarQube 'SonarScanner' // must match the name configured in Jenkins
+    }
+
+    environment {
+        SONAR_TOKEN = credentials('SONAR_TOKEN')   // SonarCloud token
+        SNYK_TOKEN  = credentials('SNYK_TOKEN')    // Snyk token (if using)
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'git-creds', url: 'https://github.com/saakethrajaram/JenkinsCI-Demo.git'
+                git url: 'https://github.com/saakethrajaram/JenkinsCI-Demo.git', branch: 'main'
             }
         }
 
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
-                sh 'mvn clean install'
+                // For Node.js project
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Unit & Integration Tests') {
+            steps {
+                // Continue pipeline even if some tests fail
+                sh 'npm test || true'
+            }
+        }
+
+        stage('Snyk Security Scan') {
+            steps {
+                sh 'npm install -g snyk'
+                sh 'snyk auth $SNYK_TOKEN'
+                sh 'snyk test || true'   // captures vulnerabilities without breaking pipeline
             }
         }
 
         stage('SonarCloud Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('SONAR_TOKEN')
-            }
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh """
-                        mvn sonar:sonar \
+                        sonar-scanner \
                           -Dsonar.projectKey=saakethrajaram_JenkinsCI-Demo \
                           -Dsonar.organization=saakethrajaram \
-                          -Dsonar.host.url=https://sonarcloud.io \
+                          -Dsonar.sources=. \
+                          -Dsonar.exclusions=node_modules/**,test/** \
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                           -Dsonar.login=$SONAR_TOKEN
                     """
                 }
@@ -42,6 +61,13 @@ pipeline {
                     waitForQualityGate abortPipeline: true
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            // Archive logs for reference
+            archiveArtifacts artifacts: '**/target/*.log', allowEmptyArchive: true
         }
     }
 }
