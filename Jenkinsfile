@@ -20,28 +20,32 @@ pipeline {
             }
         }
 
-        stage('Run Unit & Integration Tests') {
+        stage('Snyk Auth & Test') {
             steps {
-                bat '''
-                echo Running tests...
-                npm test || echo 'Tests failed or Snyk not authenticated, continuing...'
-                '''
+                withCredentials([string(credentialsId: 'SNYK_TOKEN', variable: 'SNYK_TOKEN')]) {
+                    bat """
+                    echo Authenticating Snyk...
+                    snyk auth %SNYK_TOKEN%
+                    
+                    echo Running tests...
+                    npm test || echo 'Tests failed or Snyk not authenticated, continuing...'
+                    """
+                }
             }
         }
 
         stage('SonarCloud Analysis') {
             steps {
-                withEnv(["SONAR_TOKEN=${SONAR_TOKEN}"]) {
-                    bat '''
-                    echo Starting SonarCloud scan...
-                    sonar-scanner ^
-                      -Dsonar.projectKey=saakethrajaram_JenkinsCI-Demo ^
-                      -Dsonar.organization=saakethrajaram ^
-                      -Dsonar.sources=. ^
-                      -Dsonar.exclusions=node_modules/**,test/** ^
-                      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info ^
-                      -Dsonar.login=%SONAR_TOKEN%
-                    '''
+                withSonarQubeEnv('SonarCloud') {
+                    bat """
+                        sonar-scanner ^
+                          -Dsonar.projectKey=saakethrajaram_JenkinsCI-Demo ^
+                          -Dsonar.organization=saakethrajaram ^
+                          -Dsonar.sources=. ^
+                          -Dsonar.exclusions=node_modules/**,test/** ^
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info ^
+                          -Dsonar.login=%SONAR_TOKEN%
+                    """
                 }
             }
         }
